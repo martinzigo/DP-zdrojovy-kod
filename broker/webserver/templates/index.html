@@ -1,0 +1,277 @@
+{% extends "bootstrap/base.html" %}
+{% block title %}Flask-MQTT{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+
+body {
+  background-color: whitesmoke;
+}
+
+.container {
+    background-color: white;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.pt {
+    padding-top: 30px
+}
+
+.pt-10 {
+    padding-top:10px
+}
+
+.pt-5 {
+    padding-top:5px
+}
+
+.pb-10 {
+    padding-bottom:10px
+}
+
+.pb {
+    padding-bottom: 30px
+}
+
+.border {
+  border-radius: 25px;
+  border: 2px solid whitesmoke;
+  padding: 20px;
+  width: 200px;
+  height: 150px;
+}
+
+.end {
+    text-align: end;
+}
+
+.page-header {
+     border-bottom: 0px solid #eee
+}
+
+.line {
+    border-bottom: 1px solid #eee
+}
+
+.info {
+    padding-left:30px;
+    padding-top:30px;
+}
+
+.borderxp {
+  border-radius: 25px;
+  border: 2px solid whitesmoke;
+  height: auto;
+}
+
+
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+
+
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+
+  $(document).ready(function() {
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    $('#publish').click(function(event) {
+      var topic = $('#topic').val();
+      var message = $('#message').val();
+      var qos = $('#qos').val();
+      var data = '{"topic": "' + topic + '", "message": "' + message + '", "qos": ' + qos + '}';
+
+      socket.emit('publish', data=data);
+    });
+
+    $('#subscribe').click(function(event) {
+      var topic = $('#subscribe_topic').val();
+      var qos = $('#subscribe_qos').val();
+      var data = '{"topic": "' + topic + '", "qos": ' + qos + '}';
+      socket.emit('subscribe', data=data);
+      $('#subscribe').hide();
+      $('#unsubscribe').show();
+      $('#subscribe_topic').prop('readonly', true);
+    });
+
+    $('#unsubscribe').click(function(event) {
+      socket.emit('unsubscribe_all');
+      $('#subscribe').show();
+      $('#unsubscribe').hide();
+      $('#subscribe_topic').prop('readonly', false);
+    });
+
+    socket.on('mqtt_message', function(data) {
+      console.log(data);
+      var text = data['payload']['temperature'] + " " + data['payload']['humidity'];
+      var value = data['payload']['temperature'];
+      var value1 = data['payload']['humidity'];
+      
+      var today = new Date();
+      var date = today.toLocaleTimeString();
+      
+      Temperature.data.labels.push(date);
+      Temperature.data.datasets[0].data.push(value);
+      Temperature.update();
+      
+      Humidity.data.labels.push(date);
+      Humidity.data.datasets[0].data.push(value1);
+      Humidity.update();
+      
+      $('#time').text("Timestamp: "+date);
+      $('#temp').text("Teplota: "+" "+value+ " °C");
+      $('#hum').text("Vlhkosť: "+" "+value1+ " %");
+
+      var $textarea = $('#subscribe_messages');
+      $textarea.val($textarea.val() + text + '\n');
+      
+    })
+  });
+</script>
+
+{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<br>
+<div class="container pb" style="width:80%">
+     <div class="row">
+          <div class="col-sm-6">
+              <div class="page-header">
+                  <h3>Meranie teploty a vlhkosti</h3>
+                  <p>Odoberať MQTT topic:</p>
+                  <div class="line"></div><br>
+                  
+                  <div class="row pb-10">
+                      <div class="col-sm-2">
+                              <label class="control-label pt-5">Topic </label>
+                      </div>
+                      <div class="col-sm-10">
+                      <input id="subscribe_topic" class="form-control">
+                      </div>
+                  </div>
+                
+                  <div class="row">
+                      <div class="col-sm-2">
+                              <label class="control-label pt-5">QoS </label>
+                      </div>
+                      <div class="col-sm-10">
+                          <select id="subscribe_qos" class="form-control">
+                              <option value=0>0</option>
+                              <option value=1>1</option>
+                              <option value=2>2</option>
+                        </select>
+                        
+                      </div>
+                  </div><br>
+                  <div class="row">
+                      <div class="col-sm-9">
+                      </div>
+                      <div class="col-sm-3 end">
+                         <button id="subscribe" class="btn btn-primary">Subscribe</button>
+                         <button id="unsubscribe" class="btn btn-default" style="display: none;" >Unsubscribe</button>
+                      </div>
+                  </div>
+                  
+            </div>
+          </div>
+          <div class="col-sm-6">
+              <div class="page-header">
+                      <h3><small>Posledné prijaté dáta</small></h3>
+                      <p id="time">Timestamp: </p>
+                      <div class="line"></div><br>
+                      
+                      <div class="row pb-10 pt-5">
+                          <div class="col-sm-12">
+                                  <label id="temp" class="control-label pt-5">Teplota </label>
+                          </div>
+                      </div>
+                    
+                      <div class="row">
+                          <div class="col-sm-12 pt-5">
+                                  <label id="hum" class="control-label pt-5">Vlhkosť </label>
+                          </div>
+                      </div><br>
+                      <div class="row">
+                      </div>
+              </div>
+          </div>
+     </div>
+   
+
+    <div class="row pt">
+      <div class="col-sm-6">
+          <canvas id="Temperature" class="border"></canvas>
+      </div>
+      <div class="col-sm-6">
+          <canvas id="Humidity" class="border"></canvas>
+      </div>
+    </div>
+    
+</div>
+
+<script>
+  const data = {
+    labels: [],
+    datasets: [{
+      label: 'Teplota (°C)',
+      backgroundColor: 'rgb(255, 99, 132)',
+      borderColor: 'rgb(255, 99, 132)',
+      borderWidth:1,
+      pointRadius:1,
+      data: [],
+    }]
+  };
+
+  const data_hum = {
+    labels: [],
+    datasets: [{
+      label: 'Vlhkosť (%)',
+      backgroundColor: 'rgb(51, 122, 183)',
+      borderColor: 'rgb(51, 122, 183)',
+      borderWidth:1,
+      pointRadius:1,
+      data_hum: [],
+    }]
+  };
+  
+</script>
+
+
+
+<script>
+  const config = {
+    type: 'line',
+    data: data,
+    options: {}
+  };
+
+  const config2 = {
+    type: 'line',
+    data: data_hum,
+    options: {}
+  };
+</script>
+
+<script>
+  const Humidity = new Chart(
+    document.getElementById('Humidity'),
+    config2
+  );
+
+    const Temperature = new Chart(
+    document.getElementById('Temperature'),
+    config
+  );
+</script>
+
+
+{% endblock %}

